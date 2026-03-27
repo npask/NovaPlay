@@ -1,5 +1,5 @@
 // install-script.js
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 const { spawn } = require("child_process");
 const readline = require("readline");
@@ -80,12 +80,12 @@ async function install() {
 
     async function ensureFile(filePath) {
       const dir = path.dirname(filePath);
-      await fs.promises.mkdir(dir, { recursive: true }); // erstellt nur Ordner, falls nötig
+      await fs.mkdir(dir, { recursive: true }); // erstellt nur Ordner, falls nötig
 
       try {
-        await fs.promises.access(filePath, fs.constants.F_OK); // prüft, ob Datei existiert
+        await fs.access(filePath, fs.constants.F_OK); // prüft, ob Datei existiert
       } catch {
-        await fs.promises.writeFile(filePath, ''); // Datei erstellen, falls fehlt
+        await fs.writeFile(filePath, ''); // Datei erstellen, falls fehlt
       }
     }
 
