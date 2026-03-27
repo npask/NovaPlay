@@ -13,7 +13,7 @@ const isDebug = process.argv.includes("--debug");
 if (isDevBeta) {
   REPO_BASE = "https://raw.githubusercontent.com/npask/NovaPlay/developing";
   console.log("⚡ Running in DEV/BETA mode!");
-  console.log("⚠️ Dev installer last changed at 20:56")
+  console.log("⚠️ Dev installer last changed at 12:03")
 }
 
 if (isDebug) console.log("🐞 Debug mode ON: verbose logging enabled");
@@ -45,7 +45,7 @@ async function installDep(dep, version = "latest") {
   console.log(`📦 Installing ${dep}@${version} from tarball...`);
 
   return new Promise((resolve) => {
-    const args = ["install", tarballUrl, "--no-save"];
+    const args = ["install", tarballUrl];
     if (!isDebug) args.push("--silent");
 
     const npm = spawn("npm", args, { stdio: isDebug ? "inherit" : "ignore" });
