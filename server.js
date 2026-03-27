@@ -4,6 +4,8 @@ import path from 'path';
 import bodyParser from 'body-parser';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
+import { exec } from 'child_process';
+import dns from 'dns';
 
 const app = express();
 const PORT = 3000;
@@ -27,6 +29,64 @@ let progressState = {}; // für Thumbnail-Worker
 const videoExtensions = ['.mp4', '.mkv', '.webm', '.avi'];
 const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg'];
 const imageExtensions = ['.png', '.gif', '.jpg', '.jpeg'];
+
+// --- Update funktion ---
+const SERVER_VERSION = '1.0.0';
+const UPDATE_CHECK_INTERVAL = 1000 * 60 * 15;
+const REMOTE_SERVER_JS_URL = 'https://raw.githubusercontent.com/npask/Media-Server/main/server.js';
+const LOCAL_SERVER_JS = process.argv[1];
+
+// --- Prüfen ob Internet verfügbar ---
+async function isOnline() {
+    return new Promise(resolve => {
+        dns.lookup('github.com', err => resolve(!err));
+    });
+}
+
+// --- Update prüfen und ggf. anwenden ---
+async function checkForUpdate() {
+    const online = await isOnline();
+    if (!online) return console.log('Kein Internet – Update übersprungen');
+
+    try {
+        // Remote server.js laden
+        const res = await fetch(REMOTE_SERVER_JS_URL);
+        if (!res.ok) return console.log('Remote server.js konnte nicht geladen werden');
+        const remoteCode = await res.text();
+
+        // Prüfen, ob die Version anders ist (embedded in remote)
+        const versionMatch = remoteCode.match(/const SERVER_VERSION\s*=\s*['"]([\d\.]+)['"]/);
+        if (!versionMatch) return console.log('Keine Version in remote server.js gefunden');
+        const remoteVersion = versionMatch[1];
+
+        if (remoteVersion !== SERVER_VERSION) {
+            console.log(`Neue Version gefunden: ${remoteVersion} (lokal: ${SERVER_VERSION})`);
+
+            // Backup der alten server.js
+            await fs.copy(LOCAL_SERVER_JS, LOCAL_SERVER_JS + '.bak');
+
+            // Update schreiben
+            await fs.writeFile(LOCAL_SERVER_JS, remoteCode);
+
+            console.log('Update installiert – Server wird neu gestartet');
+            exec(`node ${LOCAL_SERVER_JS}`, (err, stdout, stderr) => {
+                if (err) console.error(err);
+                process.exit(0); // alter Prozess beendet sich
+            });
+        } else {
+            console.log('Server ist aktuell ✅');
+        }
+
+    } catch (e) {
+        console.error('Update-Check Fehler:', e);
+    }
+}
+
+// --- Intervall starten ---
+setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL);
+
+// --- Optional: sofort prüfen beim Start ---
+checkForUpdate();
 
 // --- Hilfsfunktionen ---
 async function listFolders(basePath) {
