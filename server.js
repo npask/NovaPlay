@@ -4,13 +4,56 @@ import path from 'path';
 import bodyParser from 'body-parser';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
 import { exec } from 'child_process';
 import dns from 'dns';
 import cookieParser from 'cookie-parser';
 
-// ffmpeg direkt auf das Node-Binary setzen
-ffmpeg.setFfmpegPath(ffmpegPath);
+let ffmpegPath = null;
+
+try {
+    // dynamischer Import, catch falls Modul nicht existiert
+    ffmpegPath = (await import('ffmpeg-static')).default;
+    console.log("📌 ffmpeg-static gefunden");
+} catch (e) {
+    console.warn("⚠ ffmpeg-static nicht gefunden, fallback auf System-ffmpeg");
+}
+
+async function setupFFmpeg() {
+    if (ffmpegPath) {
+        try {
+            ffmpeg.setFfmpegPath(ffmpegPath);
+            await new Promise((resolve, reject) => {
+                exec(`${ffmpegPath} -version`, (err, stdout) => err ? reject(err) : resolve(stdout));
+            });
+            console.log("✅ ffmpeg-static wird verwendet");
+            return;
+        } catch (e) {
+            console.warn("⚠ ffmpeg-static funktioniert nicht, fallback auf System ffmpeg");
+        }
+    }
+
+    // Prüfen ob System-FFmpeg installiert ist
+    try {
+        await new Promise((resolve, reject) => {
+            exec('ffmpeg -version', (err, stdout) => err ? reject(err) : resolve(stdout));
+        });
+        ffmpeg.setFfmpegPath('ffmpeg'); // System ffmpeg
+        console.log("✅ System-ffmpeg wird verwendet");
+    } catch (e) {
+        console.error("❌ Kein ffmpeg gefunden! Bitte installieren: pkg install ffmpeg oder sudo apt-get install ffmpeg");
+        process.exit(1);
+    }
+}
+
+await setupFFmpeg();
+
+async function checkBetaFile() {
+    const devFilePath = path.join(process.cwd(), 'DELETE THIS IF YOU WANT TO LEAVE THE BETA DEV PROGRAMM.NovaPlayDevFile');
+    const exists = await fs.pathExists(devFilePath);
+    if (exists) {
+        console.log("⚡ Beta/Dev-Program active");
+    }
+}
 
 const app = express();
 const PORT = 3000;
@@ -36,7 +79,8 @@ const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg'];
 // --- Update funktion ---
 const SERVER_VERSION = '0.0.1 BETA';
 const UPDATE_CHECK_INTERVAL = 1000 * 60 * 15;
-const REMOTE_SERVER_JS_URL = 'https://raw.githubusercontent.com/npask/NovaPlay/main/server.js';
+const isBeta = await checkBetaFile();
+const REMOTE_SERVER_JS_URL = isBeta ? 'https://raw.githubusercontent.com/npask/NovaPlay/developing/server.js': 'https://raw.githubusercontent.com/npask/NovaPlay/main/server.js';
 const LOCAL_SERVER_JS = process.argv[1];
 
 // --- Prüfen ob Internet verfügbar ---
