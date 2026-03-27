@@ -64,7 +64,7 @@ async function install() {
 
   // Warte und sage dem user das
   async function countdown(seconds) {
-    console.log(`\n⚡ Installing to "${INSTALL_DIR}" in ${seconds} seconds... (CTRL+C to cancel)`);
+    console.log(`⚡ Installing to "${INSTALL_DIR}" in ${seconds} seconds... (CTRL+C to cancel)`);
     for (let i = seconds; i > 0; i--) {
       process.stdout.write(`⏳ ${i}...\r`);
       await new Promise(res => setTimeout(res, 1000));
