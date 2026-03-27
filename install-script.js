@@ -18,9 +18,29 @@ if (isDevBeta) {
 if (isDebug) console.log("🐞 Debug mode ON: verbose logging enabled");
 
 // --- Einfache Frage an den Nutzer
-function ask(question) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise(resolve => rl.question(question, ans => { rl.close(); resolve(ans); }));
+function ask(question, options = {}) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    let timeoutId;
+    if (options.timeout) {
+      timeoutId = setTimeout(() => {
+        rl.close();
+        resolve(options.default || '');
+      }, options.timeout);
+    }
+
+    rl.question(question, answer => {
+      if (timeoutId) clearTimeout(timeoutId);
+      rl.close();
+      answer = answer.trim();
+      if (!answer && options.default !== undefined) return resolve(options.default);
+      resolve(answer);
+    });
+  });
 }
 
 // --- Fetch file vom GitHub Repo
@@ -69,7 +89,7 @@ async function install() {
   );
 
   // Frage den Nutzer, ob er einen anderen Installationsordner nutzen möchte
-  const ans = await ask(`Current install folder is "${INSTALL_DIR}". Do you want to install in a different folder? [y/N] `);
+  const ans = await ask(`Current install folder is "${INSTALL_DIR}". Do you want to install in a different folder? [y/N] `, { default: 'N', timeout: 60000 });
   if (ans.toLowerCase() === "y") {
     const newDir = await ask("Enter full path to the new install folder: ");
     if (newDir) {
