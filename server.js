@@ -2,7 +2,6 @@ import express from 'express';
 import fs from 'fs-extra';
 import path from 'path';
 import bodyParser from 'body-parser';
-import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import { exec } from 'child_process';
 import dns from 'dns';
@@ -275,10 +274,7 @@ async function generateThumbnail(videoPath, outputPath) {
             })
             .on('end', async () => {
                 try {
-                    await sharp(tempPath)
-                        .webp({ quality: 60 })
-                        .toFile(outputPath);
-                    await fs.remove(tempPath);
+                    await fs.rename(tempPath, outputPath);
                     resolve();
                 } catch (e) {
                     reject(e);
