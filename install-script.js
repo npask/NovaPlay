@@ -13,31 +13,30 @@ if (isDevBeta) {
   console.log("⚡ Running in DEV/BETA mode!");
 }
 
+// --- Fetch file vom GitHub Repo
 const fetchFile = async (file) => {
   const res = await fetch(`${REPO_BASE}/${file}`);
   if (!res.ok) throw new Error(`Failed to fetch ${file}`);
-  const data = await res.text();
-  await fs.writeFile(path.join(INSTALL_DIR, file), data, "utf8");
-  console.log(`✔ Downloaded ${file}`);
+  return await res.text();
 };
 
-async function installDep(dep) {
+// --- Installiert ein Paket direkt vom npm-Tarball, keine Nebendependencies
+async function installDep(dep, version = "latest") {
   if (dep === "ffmpeg-static") {
-    // Prüfen, ob ffmpeg installiert ist
     const check = spawn("ffmpeg", ["-version"]);
     check.on("error", () => console.warn("⚠ ffmpeg not found. Install manually."));
-    check.on("exit", (code) => {
+    check.on("exit", code => {
       if (code === 0) console.log("✔ ffmpeg available");
       else console.warn("⚠ ffmpeg not found. Install manually.");
     });
     return;
   }
 
+  const tarballUrl = `https://registry.npmjs.org/${dep}/-/${dep}-${version}.tgz`;
+
   return new Promise((resolve) => {
-    const npm = spawn("npm", ["install", dep, "--no-save", "--legacy-peer-deps", "--silent"], {
-      stdio: "ignore"
-    });
-    npm.on("exit", (code) => {
+    const npm = spawn("npm", ["install", tarballUrl, "--no-save", "--silent"], { stdio: "ignore" });
+    npm.on("exit", code => {
       if (code === 0) console.log(`✔ ${dep} installed`);
       else console.error(`❌ Failed to install ${dep}`);
       resolve();
@@ -45,29 +44,43 @@ async function installDep(dep) {
   });
 }
 
+// --- Hauptfunktion
 async function install() {
   console.log("📥 Installing NovaPlay...");
 
-  // 1️⃣ Dateien holen
-  for (const file of FILES_TO_FETCH) {
-    try { await fetchFile(file); }
-    catch (e) { console.error(`❌ Error downloading ${file}: ${e.message}`); }
+  // 1️⃣ server.js holen
+  try {
+    const serverJs = await fetchFile("server.js");
+    await fs.writeFile(path.join(INSTALL_DIR, "server.js"), serverJs, "utf8");
+    console.log("✔ Downloaded server.js");
+  } catch (e) {
+    console.error(`❌ Error downloading server.js: ${e.message}`);
   }
 
-  // 2️⃣ Dependencies laden
+  // 2️⃣ package.json nur im Speicher laden, noch nicht speichern
   let pkg;
   try {
-    const pkgData = await fs.readFile(path.join(INSTALL_DIR, "package.json"), "utf8");
+    const pkgData = await fetchFile("package.json");
     pkg = JSON.parse(pkgData);
   } catch (e) {
-    console.error("❌ Cannot read package.json:", e.message);
+    console.error("❌ Cannot fetch package.json:", e.message);
     return;
   }
 
-  const depNames = Object.keys(pkg.dependencies || {});
-
   // 3️⃣ Jede Dependency einzeln installieren
-  for (const dep of depNames) await installDep(dep);
+  const depEntries = Object.entries(pkg.dependencies || {});
+  for (const [dep, ver] of depEntries) {
+    const cleanVersion = ver.replace(/^[^0-9]*/, ""); // entfernt ^ oder ~
+    await installDep(dep, cleanVersion || "latest");
+  }
+
+  // 4️⃣ package.json erst nach der Installation speichern
+  try {
+    await fs.writeFile(path.join(INSTALL_DIR, "package.json"), JSON.stringify(pkg, null, 2), "utf8");
+    console.log("✔ package.json saved");
+  } catch (e) {
+    console.error(`❌ Failed to save package.json: ${e.message}`);
+  }
 
   console.log("\n✅ Installation complete!");
   console.log("Start server with: node server.js");
