@@ -50,7 +50,6 @@ async function installDep(dep, version = "latest") {
 
     const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
-    const args = ["install", tarballUrl];
     if (!isDebug) args.push("--silent");
 
     const npm = spawn(npmCmd, args, { shell: true, stdio: isDebug ? "inherit" : "ignore" });
