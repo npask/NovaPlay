@@ -21,7 +21,7 @@ if (isDebug) console.log("🐞 Debug mode ON: verbose logging enabled");
 // --- Fetch file vom GitHub Repo
 const fetchFile = async (file) => {
   console.log(`⬇ Fetching ${file} from ${REPO_BASE}...`);
-  const res = await fetch(`${REPO_BASE}/${file}`);
+  const res = await fetch(`${REPO_BASE}/${file}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Failed to fetch ${file}`);
   const data = await res.text();
   console.log(`✔ Fetched ${file}`);
