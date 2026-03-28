@@ -79,7 +79,7 @@ const videoExtensions = ['.mp4', '.mkv', '.webm', '.avi'];
 const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg'];
 
 // --- Update funktion ---
-const SERVER_VERSION = '0.0.6 BETA';
+const SERVER_VERSION = '0.0.6 FinalDev';
 const UPDATE_CHECK_INTERVAL = 1000 * 60 * 15;
 const isBeta = await checkBetaFile();
 const REMOTE_SERVER_JS_URL = isBeta == true ? 'https://raw.githubusercontent.com/npask/NovaPlay/developing/server.js': 'https://raw.githubusercontent.com/npask/NovaPlay/main/server.js';
@@ -95,7 +95,7 @@ async function isOnline() {
 // --- Update prüfen und ggf. anwenden ---
 async function checkForUpdate() {
     const online = await isOnline();
-    if (!online) return console.log('Kein Internet - Update übersprungen');
+    if (!online) return console.log('No internet connection - skipping update check');
 
     try {
         // Remote server.js laden
@@ -117,17 +117,14 @@ async function checkForUpdate() {
             // Update schreiben
             await fs.writeFile(LOCAL_SERVER_JS, remoteCode);
 
-            console.log('🎉 Update installiert - Server wird neu gestartet');
-            exec(`node "${LOCAL_SERVER_JS}"`, (err, stdout, stderr) => {
-                if (err) console.error(err);
-                process.exit(0); // alter Prozess beendet sich
-            });
+            console.log('🎉 Update installed - Exiting');
+            process.exit(0);
         } else {
             console.log('🔵 Server is up-to-date!');
         }
 
     } catch (e) {
-        console.error('Update-Check Fehler:', e);
+        console.error('Update-Check Error:', e);
     }
 }
 
