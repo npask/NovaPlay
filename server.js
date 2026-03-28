@@ -117,11 +117,8 @@ async function checkForUpdate() {
             // Update schreiben
             await fs.writeFile(LOCAL_SERVER_JS, remoteCode);
 
-            console.log('🎉 Update installiert - Server wird neu gestartet');
-            exec(`node "${LOCAL_SERVER_JS}"`, (err, stdout, stderr) => {
-                if (err) console.error(err);
-                process.exit(0); // alter Prozess beendet sich
-            });
+            console.log('🎉 Update installed - Exiting');
+            process.exit(0);
         } else {
             console.log('🔵 Server is up-to-date!');
         }
