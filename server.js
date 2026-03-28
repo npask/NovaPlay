@@ -1,3 +1,4 @@
+console.log("✨ Starting NovaPlay")
 import express from 'express';
 import fs from 'fs-extra';
 import path from 'path';
@@ -78,7 +79,7 @@ const videoExtensions = ['.mp4', '.mkv', '.webm', '.avi'];
 const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg'];
 
 // --- Update funktion ---
-const SERVER_VERSION = '0.0.1 BETA';
+const SERVER_VERSION = '0.0.1 DEV';
 const UPDATE_CHECK_INTERVAL = 1000 * 60 * 15;
 const isBeta = await checkBetaFile();
 const REMOTE_SERVER_JS_URL = isBeta == true ? 'https://raw.githubusercontent.com/npask/NovaPlay/developing/server.js': 'https://raw.githubusercontent.com/npask/NovaPlay/main/server.js';
@@ -103,12 +104,12 @@ async function checkForUpdate() {
         const remoteCode = await res.text();
 
         // Prüfen, ob die Version anders ist (embedded in remote)
-        const versionMatch = remoteCode.match(/const SERVER_VERSION\s*=\s*['"]([\d\.]+)['"]/);
-        if (!versionMatch) return console.log('Keine Version in remote server.js gefunden');
+        const versionMatch = remoteCode.match(/const SERVER_VERSION\s*=\s*['"]([^'"]+)['"]/);
+        if (!versionMatch) return console.log('⚠ No Version in Server Version found');
         const remoteVersion = versionMatch[1];
 
         if (remoteVersion !== SERVER_VERSION) {
-            console.log(`Neue Version gefunden: ${remoteVersion} (lokal: ${SERVER_VERSION})`);
+            console.log(`💠 New Version found: ${remoteVersion} (local: ${SERVER_VERSION})`);
 
             // Backup der alten server.js
             await fs.copy(LOCAL_SERVER_JS, LOCAL_SERVER_JS + '.bak');
@@ -116,13 +117,13 @@ async function checkForUpdate() {
             // Update schreiben
             await fs.writeFile(LOCAL_SERVER_JS, remoteCode);
 
-            console.log('Update installiert – Server wird neu gestartet');
+            console.log('🎉 Update installiert - Server wird neu gestartet');
             exec(`node ${LOCAL_SERVER_JS}`, (err, stdout, stderr) => {
                 if (err) console.error(err);
                 process.exit(0); // alter Prozess beendet sich
             });
         } else {
-            console.log('Server ist aktuell ✅');
+            console.log('🔵 Server is up-to-date!');
         }
 
     } catch (e) {
@@ -919,4 +920,4 @@ app.get('/scan', async (req,res)=>{
 });
 
 // --- Server starten ---
-app.listen(PORT,()=>console.log(`Server läuft auf http://localhost:${PORT}`));
+app.listen(PORT,()=>console.log(`❇️ Started / Server running on http://localhost:${PORT}`));
