@@ -1,47 +1,12 @@
-// install-script.js
+// install-script.js (CommonJS, läuft ohne package.json)
 const fs = require("fs").promises;
 const path = require("path");
-const { spawn } = require("child_process");
-const readline = require("readline");
+const { execSync } = require("child_process");
 
-let INSTALL_DIR = process.cwd();
+const INSTALL_DIR = process.cwd();
+const REPO_BASE = "https://raw.githubusercontent.com/npask/NovaPlay/main";
+
 const FILES_TO_FETCH = ["server.js", "package.json"];
-let REPO_BASE = "https://raw.githubusercontent.com/npask/NovaPlay/main";
-const isDevBeta = process.argv.includes("devbeta=true");
-const isDebug = process.argv.includes("--debug");
-
-if (isDevBeta) {
-  REPO_BASE = "https://raw.githubusercontent.com/npask/NovaPlay/developing";
-  console.log("⚡ Running in DEV/BETA mode!");
-}
-
-if (isDebug) console.log("🐞 Debug mode ON: verbose logging enabled");
-
-// --- Fetch file vom GitHub Repo
-const fetchFile = async (file) => {
-  console.log(`⬇ Fetching ${file} from ${REPO_BASE}...`);
-  const res = await fetch(`${REPO_BASE}/${file}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`Failed to fetch ${file}`);
-  const data = await res.text();
-  console.log(`✔ Fetched ${file}`);
-  return data;
-};
-
-// --- Installiert ein Paket direkt vom npm-Tarball, keine Nebendependencies
-async function installDep(dep, version = "latest") {
-  if (dep === "ffmpeg-static") {
-    console.log(`🔍 Checking ffmpeg availability...`);
-    const check = spawn("ffmpeg", ["-version"]);
-    check.on("error", () => console.warn("⚠ ffmpeg not found. Install manually."));
-    check.on("exit", code => {
-      if (code === 0) console.log("✔ ffmpeg available");
-      else console.warn("⚠ ffmpeg not found. Install manually.");
-    });
-    return;
-  }
-
-  const tarballUrl = `https://registry.npmjs.org/${dep}/-/${dep}-${version}.tgz`;
-  console.log(`📦 Installing ${dep}@${version} from tarball...`);
 
   return new Promise((resolve) => {
     const args = ["install", tarballUrl];
@@ -59,16 +24,23 @@ async function installDep(dep, version = "latest") {
 
 // --- Hauptfunktion
 async function install() {
-  console.log(
-    `📥 Installing NovaPlay${isDevBeta ? " BETA mode... (NOTICE: THIS VERSION IS NOT VERIFIED, BUGS CAN HAPPEN)" : "..." }`
-  );
+    console.log("Installing NovaPlay...");
 
-  // Warte und sage dem user das
-  async function countdown(seconds) {
-    console.log(`⚡ Installing to "${INSTALL_DIR}" in ${seconds} seconds... (CTRL+C to cancel)`);
-    for (let i = seconds; i > 0; i--) {
-      process.stdout.write(`⏳ ${i}...\r`);
-      await new Promise(res => setTimeout(res, 1000));
+    for (const file of FILES_TO_FETCH) {
+        try {
+            const url = `${REPO_BASE}/${file}`;
+            const res = await fetch(url);
+
+            if (!res.ok) throw new Error(`Failed to fetch ${file}`);
+
+            const data = await res.text();
+            const targetPath = path.join(INSTALL_DIR, file);
+
+            await fs.writeFile(targetPath, data, "utf8");
+            console.log(`✔ Downloaded ${file}`);
+        } catch (e) {
+            console.error(`❌ Error downloading ${file}:`, e.message);
+        }
     }
     console.log("✅ Starting installation...\n");
   }
@@ -130,8 +102,11 @@ async function install() {
     console.error(`❌ Failed to save package.json: ${e.message}`);
   }
 
-  console.log("\n✅ Installation complete!");
-  console.log(`Start server with: node ${path.join(INSTALL_DIR, "server.js")}`);
+    console.log("📦 Installing dependencies...");
+    execSync("npm install", { stdio: "inherit" });
+
+    console.log("✅ Done! Start server with:");
+    console.log("node server.js");
 }
 
 install();
